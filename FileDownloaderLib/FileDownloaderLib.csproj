@@ -6,4 +6,8 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
+    <ItemGroup>
+      <PackageReference Include="YoutubeExplode" Version="6.2.14" />
+    </ItemGroup>
+
 </Project>
