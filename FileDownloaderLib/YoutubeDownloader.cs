@@ -5,26 +5,44 @@ namespace FileDownloaderLib;
 
 public class YoutubeDownloader
 {
-    public async Task DownloadVideoAsync(string url, string? destinationPath = null)
+    private readonly YoutubeClient _youtubeClient;
+
+    public YoutubeDownloader()
     {
-        var youtube = new YoutubeClient();
+        _youtubeClient = new YoutubeClient();
+    }
+    
+    public async Task DownloadVideoAsync(string url, MuxedStreamInfo? stream = null, string? destinationPath = null)
+    {
         var videoId = url.Split("=")[1];
-        var video = await youtube.Videos.GetAsync(videoId); // replace with your video id
-        var streamManifest = await youtube.Videos.Streams.GetManifestAsync(video.Id);
-        var streamInfo = streamManifest.GetMuxedStreams().GetWithHighestVideoQuality();
+        var video = await _youtubeClient.Videos.GetAsync(videoId); // replace with your video id
+        var streamManifest = await _youtubeClient.Videos.Streams.GetManifestAsync(video.Id);
+        var streamInfo = stream ?? streamManifest.GetMuxedStreams().GetWithHighestVideoQuality();
 
         // Compose a file name, ensuring it doesn't contain illegal characters
         var fileName = $"{video.Title}.{streamInfo.Container}";
         fileName = Path.GetInvalidFileNameChars().Aggregate(fileName, (current, c) => current.Replace(c, '-'));
 
         var filePath = GetYoutubeVideoFileDownloadPath(fileName, destinationPath);
-        // await youtube.Videos.Streams.DownloadAsync(streamInfo, filePath);
 
         using (var progress = new ConsoleProgress())
-            await youtube.Videos.Streams.DownloadAsync(streamInfo, filePath, progress);
+            await _youtubeClient.Videos.Streams.DownloadAsync(streamInfo, filePath, progress);
 
         Console.WriteLine("Done");
         Console.WriteLine($"Video saved to '{fileName}'");
+    }
+    
+    public async Task<IEnumerable<MuxedStreamInfo>> GetStreamsAsync(string url)
+    {
+        var videoId = ParseVideoId(url);
+        var streamManifest = await _youtubeClient.Videos.Streams.GetManifestAsync(videoId);
+        return streamManifest.GetMuxedStreams();
+    }
+
+    private static string ParseVideoId(string url)
+    {
+        var videoId = url.Split("=")[1];
+        return videoId;
     }
 
     private static string GetYoutubeVideoFileDownloadPath(string fileName, string? destinationPath = null)

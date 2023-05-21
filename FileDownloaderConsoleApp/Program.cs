@@ -1,4 +1,6 @@
 ﻿using FileDownloaderLib;
+using Spectre.Console;
+using YoutubeExplode.Videos.Streams;
 
 if (args.Length < 1 || !args[0].StartsWith("--url="))
 {
@@ -15,7 +17,18 @@ var url = args[0].Split("--url=")[1];
 if (url.Contains("youtube.com"))
 {
     var youtubeDownloader = new YoutubeDownloader();
-    await youtubeDownloader.DownloadVideoAsync(url);
+    var streams = await youtubeDownloader.GetStreamsAsync(url);
+    var muxedStreamInfos = streams as MuxedStreamInfo[] ?? streams.ToArray();
+    
+    var prompt = new SelectionPrompt<string>()
+        .Title("Select an option:")
+        .MoreChoicesText("[grey](Move up and down to reveal more choices)[/]")
+        .AddChoices(muxedStreamInfos.Select(s => $"{s.VideoQuality.Label} - {s.Container}"));
+
+    var result = AnsiConsole.Prompt(prompt);
+    var stream = muxedStreamInfos.FirstOrDefault(s => $"{s.VideoQuality.Label} - {s.Container}" == result);
+    
+    await youtubeDownloader.DownloadVideoAsync(url, stream: stream);
     return;
 }
 
