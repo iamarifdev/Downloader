@@ -1,21 +1,35 @@
+using Library;
 using YoutubeExplode;
 using YoutubeExplode.Videos.Streams;
 
-namespace FileDownloaderLib;
+namespace Application.Services;
 
-public class YoutubeDownloader
+public class YoutubeService
 {
     private readonly YoutubeClient _youtubeClient;
 
-    public YoutubeDownloader()
+    public YoutubeService(YoutubeClient youtubeClient)
     {
-        _youtubeClient = new YoutubeClient();
+        _youtubeClient = youtubeClient;
     }
-    
-    public async Task DownloadVideoAsync(string url, MuxedStreamInfo? stream = null, string? destinationPath = null)
+
+    public async Task<IEnumerable<MuxedStreamInfo>> GetStreamsAsync(string url)
+    {
+        var videoId = ParseVideoId(url);
+        var streamManifest = await _youtubeClient.Videos.Streams.GetManifestAsync(videoId);
+        return streamManifest.GetMuxedStreams();
+    }
+
+    public string ParseVideoId(string url)
     {
         var videoId = url.Split("=")[1];
-        var video = await _youtubeClient.Videos.GetAsync(videoId); // replace with your video id
+        return videoId;
+    }
+
+    public async Task DownloadVideoAsync(string url, MuxedStreamInfo? stream = null, string? destinationPath = null)
+    {
+        var videoId = ParseVideoId(url);
+        var video = await _youtubeClient.Videos.GetAsync(videoId);
         var streamManifest = await _youtubeClient.Videos.Streams.GetManifestAsync(video.Id);
         var streamInfo = stream ?? streamManifest.GetMuxedStreams().GetWithHighestVideoQuality();
 
@@ -31,19 +45,7 @@ public class YoutubeDownloader
         Console.WriteLine("Done");
         Console.WriteLine($"Video saved to '{fileName}'");
     }
-    
-    public async Task<IEnumerable<MuxedStreamInfo>> GetStreamsAsync(string url)
-    {
-        var videoId = ParseVideoId(url);
-        var streamManifest = await _youtubeClient.Videos.Streams.GetManifestAsync(videoId);
-        return streamManifest.GetMuxedStreams();
-    }
 
-    private static string ParseVideoId(string url)
-    {
-        var videoId = url.Split("=")[1];
-        return videoId;
-    }
 
     private static string GetYoutubeVideoFileDownloadPath(string fileName, string? destinationPath = null)
     {
@@ -51,10 +53,10 @@ public class YoutubeDownloader
         {
             return destinationPath;
         }
+
+        var userProfilePath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        var downloadFolder = Path.Combine(userProfilePath, "Downloads", "Youtube");
         
-        // Save to the output directory
-        var downloadFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads",
-            "Youtube");
         if (!Directory.Exists(downloadFolder))
         {
             Directory.CreateDirectory(downloadFolder);

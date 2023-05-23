@@ -1,9 +1,9 @@
-namespace FileDownloaderLib;
+namespace Library;
 
 using System;
 using System.IO;
 
-internal class ConsoleProgress : IProgress<double>, IDisposable
+public class ConsoleProgress : IProgress<double>, IDisposable
 {
     private readonly TextWriter _writer;
     private readonly int _posX;
@@ -40,7 +40,7 @@ internal class ConsoleProgress : IProgress<double>, IDisposable
         _lastLength = text.Length;
     }
 
-    public void Report(double progress) => Write($"{progress:P1}");
+    public void Report(double progress) => Console.Write($"\rDownload progress: {progress:P2}".PadRight(20));
 
     public void Dispose() => EraseLast();
 }
